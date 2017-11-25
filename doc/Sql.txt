@@ -1,0 +1,200 @@
+OdeToJoy-SQLs.txt
+
+CREATE DATABASE IF NOT EXISTS OdeToJoy DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_bin;
+
+## 会议签到 sign_in
+CREATE TABLE `sign_in` (
+  `sign_in_id` int(10) NOT NULL AUTO_INCREMENT COMMENT '签到ID',
+  `conferee_id` int(20) DEFAULT NULL COMMENT '参会人ID',
+  `user_id` int(20) DEFAULT NULL COMMENT '用户ID',
+  `conference_id` int(20) DEFAULT NULL COMMENT '会议ID',
+  `status` tinyint(1) DEFAULT NULL COMMENT '状态 0 无效 1有效',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`sign_in_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 ROW_FORMAT=COMPACT COMMENT='会议签到'
+
+
+
+## 会议表决结果 voting_results
+CREATE TABLE `voting_results` (
+  `voting_result_id` int(10) NOT NULL AUTO_INCREMENT COMMENT '表决结果ID',
+  `conferee_id` int(20) DEFAULT NULL COMMENT '参会人ID',
+  `user_id` int(20) DEFAULT NULL COMMENT '用户ID',
+  `topic_id` int(20) DEFAULT NULL COMMENT '表决主题ID',
+  `results` varchar(128) DEFAULT NULL COMMENT '表决结果',
+  `status` tinyint(1) DEFAULT NULL COMMENT '状态 0 无效 1有效',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`voting_result_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 ROW_FORMAT=COMPACT COMMENT='会议表决结果'
+
+
+## 会议权限 conference_authorities
+CREATE TABLE `conference_authorities` (
+  `authority_id` int(10) NOT NULL AUTO_INCREMENT COMMENT '参会权限ID',
+  `conferee_id` int(20) DEFAULT NULL COMMENT '参会人ID',
+  `seat_id` int(20) DEFAULT NULL COMMENT '坐席_id',
+  `sync_screen` tinyint(1) DEFAULT NULL COMMENT '允许同屏',
+  `upload_file` tinyint(1) DEFAULT NULL COMMENT '材料ID上传',
+  `download_file` tinyint(1) DEFAULT NULL COMMENT '材料ID下载',
+  `status` tinyint(1) DEFAULT NULL COMMENT '状态 0 无效 1有效',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`authority_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 ROW_FORMAT=COMPACT COMMENT='会议权限'
+
+
+
+## 参会人员 conferees
+CREATE TABLE `conferees` (
+  `conferee_id` int(10) NOT NULL AUTO_INCREMENT COMMENT '参会人ID',
+  `user_id` int(20) DEFAULT NULL COMMENT '用户ID',
+  `name` int(20) DEFAULT NULL COMMENT '姓名',
+  `title` varchar(128) DEFAULT NULL COMMENT '会议职务',
+  `seat_id` int(20) DEFAULT NULL COMMENT '坐席',
+  `password` varchar(128) DEFAULT NULL COMMENT '密码',
+  `email` varchar(128) DEFAULT NULL COMMENT '邮箱',
+  `mobile` varchar(128) DEFAULT NULL COMMENT '手机',
+  `can_sync_screen` tinyint(1) DEFAULT NULL COMMENT '是否允许发起同屏幕  0 不允许 1允许',
+  `status` tinyint(1) DEFAULT NULL COMMENT '状态 0 无效 1有效',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`conferee_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 ROW_FORMAT=COMPACT COMMENT='会议附件'
+
+
+## 会议附件 conference_attachments
+CREATE TABLE `conference_attachments` (
+  `attachment_id` int(10) NOT NULL AUTO_INCREMENT COMMENT '附件ID',
+  `title` varchar(128) DEFAULT NULL COMMENT '材料名',
+  `agenda_id` int(20) DEFAULT NULL COMMENT '所属议程',
+  `owner_id` varchar(128) DEFAULT NULL COMMENT '材料所属人',
+  `attach_type` datetime DEFAULT NULL COMMENT '材料类型 1 系统 2 用户批注',
+  `status` tinyint(1) DEFAULT NULL COMMENT '状态 0 无效 1有效',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`attachment_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 ROW_FORMAT=COMPACT COMMENT='会议附件'
+
+
+## 会议议程 conference_agendas
+CREATE TABLE `conference_agendas` (
+  `agenda_id` int(10) NOT NULL AUTO_INCREMENT COMMENT '议程ID',
+  `agenda_code` varchar(128) DEFAULT NULL COMMENT '议程编号',
+  `conference_id` int(20) DEFAULT NULL COMMENT '所属会议ID',
+  `title` varchar(128) DEFAULT NULL COMMENT '主题',
+  `start_time` datetime DEFAULT NULL COMMENT '开始时间',
+  `end_time` datetime DEFAULT NULL COMMENT '结束时间',
+  `hostess_id` int(10) DEFAULT NULL COMMENT '主持人',
+  `status` tinyint(1) DEFAULT NULL COMMENT '状态 0 无效 1有效',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`agenda_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 ROW_FORMAT=COMPACT COMMENT='会议议程'
+
+
+## 会议表决主题 vote_topics
+CREATE TABLE `vote_topics` (
+  `topic_id` int(10) NOT NULL AUTO_INCREMENT COMMENT '表决主题ID',
+  `conference_id` int(10) DEFAULT NULL COMMENT '所属会议ID',
+  `title` varchar(128) DEFAULT NULL COMMENT '表决主题',
+  `topic_type` int(10) DEFAULT NULL COMMENT '表决类型',
+  `topic_items` varchar(128) DEFAULT NULL COMMENT '表决项目 json',
+  `status` tinyint(1) DEFAULT NULL COMMENT '状态 0 无效 1有效',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`topic_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 ROW_FORMAT=COMPACT COMMENT='会议表决主题'
+
+
+## 会议 conferences
+CREATE TABLE `conferences` (
+  `conference_id` int(10) NOT NULL AUTO_INCREMENT COMMENT '会议ID',
+  `title` varchar(128) DEFAULT NULL COMMENT '会议标题',
+  `is_secrecy` int(1) DEFAULT NULL COMMENT '是否保密 0 不保密 1保密 ',
+  `rooms` varchar(128) DEFAULT NULL COMMENT 'json格式存储room_id',
+  `start_time` datetime DEFAULT NULL COMMENT '开始时间',
+  `end_time` datetime DEFAULT NULL COMMENT '结束时间',
+  `conferee_num` int(10) DEFAULT NULL COMMENT '参会人数',
+  `clerk_id` int(10) DEFAULT NULL COMMENT '会议秘书',
+  `department` varchar(128) DEFAULT NULL COMMENT '申请部门',
+  `services` varchar(128) DEFAULT NULL COMMENT '# json格式存储config_id',
+  `functions` varchar(128) DEFAULT NULL COMMENT 'json格式存储config_id',
+  `description` varchar(128) DEFAULT NULL COMMENT '备注',
+  `status` tinyint(1) DEFAULT NULL COMMENT '状态 0 无效 1有效',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`conference_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 ROW_FORMAT=COMPACT COMMENT='会议'
+
+
+## 会议室配置 room_configs
+CREATE TABLE `room_configs` (
+  `config_id` int(10) NOT NULL AUTO_INCREMENT COMMENT '坐席ID',
+  `config_type` int(10) DEFAULT NULL COMMENT '配置类型 1 services 如：茶水 2 function 如：投影',
+  `title` varchar(128) DEFAULT NULL COMMENT '配置名称',
+  `description` varchar(128) DEFAULT NULL COMMENT '备注',
+  `status` tinyint(1) DEFAULT NULL COMMENT '状态 0 无效 1有效',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`config_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 ROW_FORMAT=COMPACT COMMENT='会议室配置'
+
+
+## 会议室坐席 seats
+CREATE TABLE `seats` (
+  `seat_id` int(10) NOT NULL AUTO_INCREMENT COMMENT '坐席ID',
+  `room_id` varchar(128) DEFAULT NULL COMMENT '所属会议室ID',
+  `seat_code` varchar(128) DEFAULT NULL COMMENT '坐席编号',
+  `seat_ip` varchar(128) DEFAULT NULL COMMENT '坐席IP',
+  `status` tinyint(1) DEFAULT NULL COMMENT '状态 0 无效 1有效',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`seat_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 ROW_FORMAT=COMPACT COMMENT='会议室坐席'
+
+
+## 会议室 rooms
+CREATE TABLE `rooms` (
+  `room_id` int(10) NOT NULL AUTO_INCREMENT COMMENT '会议室ID',
+  `room_code` varchar(128) DEFAULT NULL COMMENT '会议室编号',
+  `title` varchar(128) DEFAULT NULL COMMENT '会议室名称',
+  `location` varchar(128) DEFAULT NULL COMMENT '会议室位置',
+  `seats_num` varchar(128) DEFAULT NULL COMMENT '坐席数',
+  `manager_id` varchar(128) DEFAULT NULL COMMENT '负责人',
+  `img_map` varchar(128) DEFAULT NULL COMMENT '布局图',
+  `status` tinyint(1) DEFAULT NULL COMMENT '状态 0 无效 1有效',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`room_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 ROW_FORMAT=COMPACT COMMENT='会议室'
+
+
+## 管理员
+CREATE TABLE `administrators` (
+  `admin_id` int(10) NOT NULL AUTO_INCREMENT COMMENT '表主键id',
+  `name` varchar(128) DEFAULT NULL COMMENT '姓名',
+  `password` varchar(128) DEFAULT NULL COMMENT '密码',
+  `description` varchar(128) DEFAULT NULL COMMENT '备注',
+  `status` tinyint(1) DEFAULT NULL COMMENT '状态 0 无效 1有效',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`admin_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 ROW_FORMAT=COMPACT COMMENT='管理员'
+
+## 用户信息
+CREATE TABLE `users` (
+  `user_id` int(10) NOT NULL AUTO_INCREMENT COMMENT '表主键id',
+  `name` varchar(128) DEFAULT NULL COMMENT '姓名',
+  `sex` int(10) DEFAULT NULL COMMENT '性别',
+  `email` varchar(10) DEFAULT NULL COMMENT '邮箱',
+  `mobile` varchar(10) DEFAULT NULL COMMENT '电话',
+  `password` varchar(128) DEFAULT NULL COMMENT '密码',
+  `description` varchar(128) DEFAULT NULL COMMENT '备注',
+  `auth` int(10) DEFAULT NULL COMMENT '权限位',
+  `status` tinyint(1) DEFAULT NULL COMMENT '状态 0 无效 1有效',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间'
+  PRIMARY KEY (`user_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 ROW_FORMAT=COMPACT COMMENT='用户信息'
