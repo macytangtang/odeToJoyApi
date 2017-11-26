@@ -91,7 +91,7 @@ class Controller extends BaseController
      */
     protected function error($key, $msg)
     {
-        header('Content-type: application/json');
+        //header('Content-type: application/json');
         $ret = array('status' => $key, 'data' => $msg);
         echo json_encode($ret);
         exit();

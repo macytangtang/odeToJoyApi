@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\DB;
 
 
 /**
- * 管理、用户接口
+ * 管理员、用户接口
  *
- * 所有用户相关操作放在本类
+ * 所有管理员、用户接口相关操作放在本类
  * @package V1
  */
 class UserController extends Controller
@@ -152,6 +152,30 @@ class UserController extends Controller
             $this->returnJson(array('list'=>$res,'count'=>$count));
         }else{
             $this->error(-1,'无用户数据');
+        }
+    }
+
+    /**
+     * 管理员登陆
+     * @param string $name (必填)
+     * @param string $password (必填)
+     * @return data 200成功
+     */
+    public function login()
+    {
+        $data = $this->getPost($_POST);
+        $data['password'] = md5($data['password']);
+        
+        $res = DB::table('administrators')->where('name',$data['name'])->where('password',$data['password'])->first();
+        
+        if ($res){
+            $ret = DB::table('administrators')
+                ->where('name',$data['name'])
+                ->where('password',$data['password'])
+                ->update(array('token'=>md5($data['password']+time()),'update_time'=>time()));
+            $this->returnJson($ret);
+        }else{
+            $this->error(-1,'登陆失败');
         }
     }
 }
