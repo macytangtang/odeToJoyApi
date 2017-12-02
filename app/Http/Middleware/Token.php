@@ -20,7 +20,7 @@ class Token
             echo json_encode(array('status'=>0,'data'=>'token不能空'));
             exit();
         }
-        $request->session()->put('token',$token);
+        //$request->session()->put('token',$token);
 
         return $next($request);
     }
