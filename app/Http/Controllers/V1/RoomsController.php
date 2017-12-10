@@ -26,7 +26,7 @@ class RoomsController extends Controller
      * @param string $seats_num (必填,坐席数)
      * @param string $manager_id (必填，负责人id)
      * @param string $img_map (必填，图片url)
-     * @param int $status (选填,1有效，0无效)
+     * @param int $status (必填,1有效，0无效)
      * @return data 200成功
      */
     public function createRooms()
@@ -50,7 +50,7 @@ class RoomsController extends Controller
      * @param string $seats_num (必填,坐席数)
      * @param string $manager_id (必填，负责人)
      * @param string $img_map (必填，图片url)
-     * @param int $status (选填,1有效，0无效)
+     * @param int $status (必填,1有效，0无效)
      * @param int $room_id (必填,会议室ID)
      * @return data 200成功
      */
@@ -102,8 +102,18 @@ class RoomsController extends Controller
         $res = DB::table('rooms')
             //->offset($pageCountRecord)
             //->limit(20)
+            ->where('status','>',-1)
             ->orderBy('update_time','desc')
             ->get();
+
+        $check = $this->checkRooms();
+        foreach ($res as $key){
+            if (in_array($key->room_id,$check)){
+                $key->use_status = 1;
+            }else{
+                $key->use_status = 0;
+            }
+        }
 
         $count = DB::table('rooms')->where('status','>',-1)->orderBy('update_time','desc')->count();
 
@@ -111,6 +121,25 @@ class RoomsController extends Controller
             $this->returnJson(array('list'=>$res,'count'=>$count));
         }else{
             $this->returnJson(array());
+        }
+    }
+    private function checkRooms()
+    {
+        $rooms_str = DB::table('conferences')
+            ->where('start_time','<',date('Y-m-d H:i:s'))
+            ->where('end_time','>',date('Y-m-d H:i:s'))
+            ->where('status',1)
+            ->lists('rooms');
+        if ($rooms_str){
+            $rooms_id = "";
+            foreach ($rooms_str as $ro){
+                $rooms_id = $ro.',';
+            }
+            $rooms_id = trim($rooms_id,',');
+            $rooms_id = explode(',',$rooms_id);
+            return $rooms_id;
+        }else{
+            return array();
         }
     }
     /**
@@ -133,9 +162,10 @@ class RoomsController extends Controller
      * 创建会议室配置
      * @param string $token (必填)
      * @param string $title (必填,配置名称)
+     * @param string $images_url (必填,图片路径)
      * @param string $description (必填,会议室备注)
      * @param int $config_type (必填,配置类型 1 services 如：茶水 2 function 如：投影)
-     * @param int $status (选填,1有效，0无效)
+     * @param int $status (必填,1有效，0无效)
      * @return data 200成功
      */
     public function createRoomsConfig()
@@ -154,6 +184,7 @@ class RoomsController extends Controller
      * 更新会议室配置
      * @param string $token (必填)
      * @param string $title (必填,配置名称)
+     * @param string $images_url (必填,图片路径)
      * @param int $config_id (必填,会议室配置id)
      * @param string $description (必填,会议室备注)
      * @param int $config_type (必填,配置类型 1 services 如：茶水 2 function 如：投影)
@@ -242,7 +273,7 @@ class RoomsController extends Controller
      * @param int $room_id (必填,会议室ID)
      * @param string $seat_code (必填,坐席编号)
      * @param string $seat_ip (必填,坐席IP)
-     * @param int $status (必填,状态 0 无效 1有效)
+     * @param string $coordinate (必填,坐席坐标)
      * @return data 200成功
      */
     public function createRoomsSeats()
@@ -292,6 +323,7 @@ class RoomsController extends Controller
         $data = $this->getPost($_POST);
         $res = DB::table('seats')->where('seat_id',$data['seat_id'])->first();
         if ($res){
+
             $this->returnJson($res);
         }else{
             $this->error(-1,'获取会议坐席详情失败');
@@ -301,6 +333,7 @@ class RoomsController extends Controller
      * 获取会议室坐席列表
      * @param string $token (必填)
      * @param int $page (必填,页数)
+     * @param int $conference_id (必填,会议室id)
      * @return data 200成功
      */
     public function getRoomsSeatsList()
@@ -311,14 +344,15 @@ class RoomsController extends Controller
 //        }else{
 //            $pageCountRecord = ($data['page']-1) * 20;
 //        }
-        $res = DB::table('room_configs')
+        $res = DB::table('seats')
             //->offset($pageCountRecord)
             //->limit(20)
             ->where('status','>',-1)
+            ->where('room_id',$data['room_id'])
             ->orderBy('update_time','desc')
             ->get();
 
-        $count = DB::table('seats')->where('status','>',-1)->orderBy('update_time','desc')->count();
+        $count = DB::table('seats')->where('status','>',-1)->where('room_id',$data['room_id'])->orderBy('update_time','desc')->count();
 
         if ($res && $count){
             $this->returnJson(array('list'=>$res,'count'=>$count));
@@ -343,7 +377,33 @@ class RoomsController extends Controller
             $this->error(-1,'删除会议室坐席失败');
         }
     }
-    private function test(){
+    /**
+     * 获取坐席列表
+     * @param string $token (必填)
+     * @param int $page (必填,页数)
+     * @param int $conference_id (必填,会议id)
+     * @return data 200成功
+     */
+    public function getSeatsList()
+    {
+        $data = $this->getPost($_POST);
+//        if ($data['page'] == 1){
+//            $pageCountRecord = 0;
+//        }else{
+//            $pageCountRecord = ($data['page']-1) * 20;
+//        }
+        $res = DB::table('conferences')
+            //->offset($pageCountRecord)
+            //->limit(20)
+            ->where('conference_id',$data['conference_id'])
+            ->value("rooms");
 
+        if ($res){
+            $ret = DB::table('seats')->where('status','>',-1)->whereIn('room_id',explode(',',$res))->orderBy('update_time','desc')->get();
+
+            $this->returnJson(array('list'=>$ret,'count'=>count($ret)));
+        }else{
+            $this->returnJson(array());
+        }
     }
 }

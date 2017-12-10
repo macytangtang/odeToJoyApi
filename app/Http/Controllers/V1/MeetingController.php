@@ -38,7 +38,7 @@ class MeetingController extends Controller
         $data = $this->getPost($_POST);
         $data['create_time'] = date('Y-m-d H:i:s',time());
         $data['update_time'] = date('Y-m-d H:i:s',time());
-        $res = DB::table('conferences')->insert($data);
+        $res = DB::table('conferences')->insertGetId($data);
         if ($res){
             $this->returnJson($res);
         }else{
@@ -97,6 +97,7 @@ class MeetingController extends Controller
      * 获取会议列表
      * @param string $token (必填)
      * @param int $page (必填,页数)
+     * @param int $status (必填,1未开始，2开会中，3以结束)
      * @return data 200成功
      */
     public function getMeetingList()
@@ -107,19 +108,51 @@ class MeetingController extends Controller
 //        }else{
 //            $pageCountRecord = ($data['page']-1) * 20;
 //        }
+        $a = 0;
+        if (isset($data['status'])){
+            $a = $data['status'];
+        }
         $res = DB::table('conferences')
-            //->offset($pageCountRecord)
-            //->limit(20)
-            ->where('status','>',-1)
+            ->where(function($query) use($a){
+                if ($a > 0){
+                    $query->where('status','=',$a);
+                }else{
+                    $query->where('status','>',$a);
+                }
+
+            })
             ->orderBy('update_time','desc')
             ->get();
-
-        $count = DB::table('conferences')->where('status','>',-1)->orderBy('update_time','desc')->count();
-
-        if ($res && $count){
-            $this->returnJson(array('list'=>$res,'count'=>$count));
+        foreach ($res as $key){
+            if ($key->status == 1){
+                $key->status_name = "未开会";
+            }elseif ($key->status == 2){
+                $key->status_name = "开会中";
+            }else if($key->status == 3){
+                $key->status_name = "已结束";
+            }
+        }
+        if ($res){
+            $this->returnJson(array('list'=>$res,'count'=>count($res)));
         }else{
             $this->returnJson(array());
+        }
+    }
+    /**
+     * 开始或结束会议室
+     * @param string $token (必填)
+     * @param int $conference_id (必填,会议ID)
+     * @param int $status (必填,状态 1未开始，2开会中，3结束)
+     * @return data 200成功
+     */
+    public function endMeeting()
+    {
+        $data = $this->getPost($_POST);
+        $res = DB::table('conferences')->where('conference_id',$data['conference_id'])->update(array('status'=>$data['status']));
+        if ($res){
+            $this->returnJson($res);
+        }else{
+            $this->error(-1,'结束会议室失败');
         }
     }
     /**
@@ -167,6 +200,7 @@ class MeetingController extends Controller
      * 获取会议议程列表
      * @param string $token (必填)
      * @param int $page (必填,页数)
+     * @param int $conference_id (必填,所属会议ID)
      * @return data 200成功
      */
     public function getAgendaList()
@@ -181,12 +215,18 @@ class MeetingController extends Controller
             //->offset($pageCountRecord)
             //->limit(20)
             ->where('status','>',-1)
+            ->where('conference_id',$data['conference_id'])
             ->orderBy('update_time','desc')
             ->get();
 
-        $count = DB::table('conference_agendas')->where('status','>',-1)->orderBy('update_time','desc')->count();
+        $count = DB::table('conference_agendas')->where('conference_id',$data['conference_id'])->where('status','>',-1)->orderBy('update_time','desc')->count();
 
         if ($res && $count){
+
+            foreach ($res as $key){
+                $key->hostess_name = DB::table("users")->where("user_id",$key->hostess_id)->value("name");
+            }
+
             $this->returnJson(array('list'=>$res,'count'=>$count));
         }else{
             $this->returnJson(array());
@@ -203,6 +243,7 @@ class MeetingController extends Controller
         $data = $this->getPost($_POST);
         $res = DB::table('conference_agendas')->where('agenda_id',$data['agenda_id'])->first();
         if ($res){
+            $res->hostess_name = DB::table("users")->where("user_id",$res->hostess_id)->value("name");
             $this->returnJson($res);
         }else{
             $this->error(-1,'获取会议议程详情失败');
@@ -359,5 +400,229 @@ class MeetingController extends Controller
         }else{
             $this->error(-1,'删除会议表决主题失败');
         }
+    }
+    /**
+     * 创建会议附件
+     * @param string $token (必填)
+     * @param int $agenda_id (必填,所属议程ID)
+     * @param string $title (必填)
+     * @param string $owner_id (必填,材料所属人)
+     * @param string $file_url (必填,材料地址)
+     * @param int $attach_type (必填,材料类型 1 系统 2 用户批注)
+     * @param int $conference_id (必填,会议ID)
+     * @return data 200成功
+     */
+    public function createAttachment()
+    {
+        $data = $this->getPost($_POST);
+        $data['create_time'] = date('Y-m-d H:i:s',time());
+        $data['update_time'] = date('Y-m-d H:i:s',time());
+        $res = DB::table('conference_attachments')->insertGetId($data);
+        if ($res){
+            $this->returnJson($res);
+        }else{
+            $this->error(-1,'新增会议附件失败');
+        }
+    }
+    /**
+     * 获取会议附件列表
+     * @param string $token (必填)
+     * @param int $page (必填,页数)
+     * @param int $conference_id (必填,会议ID)
+     * @return data 200成功
+     */
+    public function getAttachmentList()
+    {
+        $data = $this->getPost($_POST);
+        $res = DB::table('conference_attachments as a')
+            ->select(DB::RAW('a.*,b.title as agenda_title,c.name'))
+            ->leftjoin('conference_agendas as b','a.agenda_id','=','b.agenda_id')
+            ->leftjoin('users as c','a.owner_id','=','c.user_id')
+            ->where('a.status','>',-1)
+            ->where('a.conference_id',$data['conference_id'])
+            ->orderBy('a.update_time','desc')
+            ->get();
+        if ($res){
+            $this->returnJson(array('list'=>$res,'count'=>count($res)));
+        }else{
+            $this->returnJson(array());
+        }
+    }
+    /**
+     * 获取会议附件详情
+     * @param string $token (必填)
+     * @param int $attachment_id (必填)
+     * @return data 200成功
+     */
+    public function getAttachmentInfo()
+    {
+        $data = $this->getPost($_POST);
+        //$res = DB::table('conference_attachments')->where('attachment_id',$data['attachment_id'])->first();
+        $res = DB::table('conference_attachments as a')
+            ->select(DB::RAW('a.*,b.title as agenda_title,c.name'))
+            ->leftjoin('conference_agendas as b','a.agenda_id','=','b.agenda_id')
+            ->leftjoin('users as c','a.owner_id','=','c.user_id')
+            ->where('a.status','>',-1)
+            ->where('a.attachment_id',$data['attachment_id'])
+            ->orderBy('a.update_time','desc')
+            ->first();
+        if ($res){
+            $this->returnJson($res);
+        }else{
+            $this->error(-1,'获取会议附件详情失败');
+        }
+    }
+    /**
+     * 更新会议附件
+     * @param string $token (必填)
+     * @param int $agenda_id (必填,所属议程ID)
+     * @param string $title (必填)
+     * @param string $owner_id (必填,材料所属人)
+     * @param string $file_url (必填,材料地址)
+     * @param int $attach_type (必填,材料类型 1 系统 2 用户批注)
+     * @param int $attachment_id (必填,附件ID)
+     * @param int $conference_id (必填,会议ID)
+     * @return data 200成功
+     */
+    public function updateAttachment()
+    {
+        $data = $this->getPost($_POST);
+        $data['update_time'] = date('Y-m-d H:i:s',time());
+        $attachment_id = $data['attachment_id'];
+        unset($data['attachment_id']);
+        $res = DB::table('conference_attachments')->where('attachment_id',$attachment_id)->update($data);
+        if ($res){
+            $this->returnJson($res);
+        }else{
+            $this->error(-1,'更新会议附件失败');
+        }
+    }
+    /**
+     * 删除会议附件
+     * @param string $token (必填)
+     * @param int $attachment_id (必填,附件ID)
+     * @return data 200成功
+     */
+    public function deleteAttachment()
+    {
+        $data = $this->getPost($_POST);
+
+        $res = DB::table('conference_attachments')->where('attachment_id',$data['attachment_id'])->update(array('status'=>-1));
+        if ($res){
+            $this->returnJson($res);
+        }else{
+            $this->error(-1,'删除会议附件失败');
+        }
+    }
+    /**
+     * 会议签到列表
+     * @param string $token (必填)
+     * @param int $conference_id (必填,会议ID)
+     * @return data 200成功
+     */
+    public function signUserList()
+    {
+        $data = $this->getPost($_POST);
+        $res = DB::table('sign_in as a')
+            ->leftjoin('conferees as b','a.conferee_id','=','b.conferee_id')
+            ->leftjoin('seats as c','b.seat_id','=','c.seat_id')
+            ->select(DB::Raw('a.create_time,a.conferee_id,a.conference_id,a.sign_in_id,b.name,b.seat_id,c.seat_code'))
+            ->where('a.conference_id',$data['conference_id'])
+            ->get();
+        if ($res){
+            $this->returnJson($res);
+        }else{
+            $this->returnJson(array());
+        }
+    }
+    /**
+     * 会议权限
+     * @param string $token (必填)
+     * @param int $conferee_id (必填,参会人ID)
+     * @param int $conference_id (必填,会议ID)
+     * @param int $upload_file (必填,材料ID上传)
+     * @param int $download_file (必填,材料ID下载)
+     * @return data 200成功
+     */
+    public function getMeetingAuth()
+    {
+        $data = $this->getPost($_POST);
+
+        $getSeatId = DB::table('conferees')->where('conferee_id',$data['conferee_id'])->value('seat_id');
+
+        $a = 0;
+        if (isset($data['upload_file'])){
+            $a = $data['upload_file'];
+        }
+        $b = 0;
+        if (isset($data['download_file'])){
+
+        }
+        $checkId = DB::table('conference_authorities')
+            ->where('conferee_id',$data['conferee_id'])
+            ->where('conference_id',$data['conference_id'])
+            ->where(function ($query) use($a,$b){
+                if ($a){
+                    $query->where('upload_file',$a);
+                }
+                if ($b){
+                    $query->where('download_file',$b);
+                }
+
+            })
+            ->first();
+        if ($checkId){
+            $data['seat_id'] = $getSeatId;
+            $data['update_time'] = date('Y-m-d H:i:s');
+            $res = DB::table('conference_authorities')->where('conferee_id',$data['conferee_id'])
+                ->where('conference_id',$data['conference_id'])->update($data);
+        }else{
+            $data['seat_id'] = $getSeatId;
+            $data['create_time'] = date('Y-m-d H:i:s');
+            $data['update_time'] = date('Y-m-d H:i:s');
+            $res = DB::table('conference_authorities')->insertGetId($data);
+        }
+        if ($res){
+            $this->returnJson($res);
+        }else{
+            $this->error(-1,'修改会议权限失败');
+        }
+    }
+    /**
+     * 会议信息发布
+     * @param string $token (必填)
+     * @param string $emailUser (必填,多个用逗号隔开)
+     * @param string $title (必填,主题)
+     * @param string $content (必填,内容)
+     * @param string $file_url (必填,附件)
+     * @return data 200成功
+     */
+    public function sendEmail()
+    {
+        $data = $this->getPost($_POST);
+        if (isset($data['file_url']) && $data['file_url'] != null){
+            $path = explode('/',$data['file_url']);
+            //文件路径
+            $file_path = public_path()."/".$path[3]."/".$path[4]."/".$path[5];
+        }
+
+        /*****发送邮件****start*****/
+
+        /*****End****/
+
+        $this->returnJson($data);
+
+    }
+    /**
+     * 会议表决结果
+     * @param string $token (必填)
+     * @param int $conference_id (必填,会议ID)
+     * @return data 200成功
+     */
+    public function getVoteMeetingResult()
+    {
+        $data = $this->getPost($_POST);
+
+        $checkId = DB::table('vote_topics')->where('conference_id',$data['conference_id'])->get();
     }
 }

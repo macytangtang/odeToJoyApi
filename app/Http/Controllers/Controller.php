@@ -19,7 +19,7 @@ class Controller extends BaseController
     {
         foreach ($args as $arg) {
             if (empty($arg) && $arg !== 0 && $arg !== '0') {
-                $this->error(404, '参数不能为空'); //参数不能为空
+                $this->error(-1, '参数不能为空'); //参数不能为空
             }
         }
     }

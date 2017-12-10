@@ -158,7 +158,7 @@ class UserController extends Controller
 
     /**
      * 管理员登陆
-     * @param string $name (必填)
+     * @param string $email (必填)
      * @param string $password (必填)
      * @return data 200成功
      */
@@ -167,14 +167,15 @@ class UserController extends Controller
         $data = $this->getPost($_POST);
         $data['password'] = md5($data['password']);
         
-        $res = DB::table('administrators')->where('name',$data['name'])->where('password',$data['password'])->first();
+        $res = DB::table('users')->where('email',$data['email'])->where('password',$data['password'])->first();
         
         if ($res){
-            $ret = DB::table('administrators')
-                ->where('name',$data['name'])
+            $token = md5($data['password']+date("Y-m-d"));
+            $ret = DB::table('users')
+                ->where('email',$data['email'])
                 ->where('password',$data['password'])
-                ->update(array('token'=>md5($data['password']+time()),'update_time'=>time()));
-            $this->returnJson($ret);
+                ->update(array('token'=>$token,'update_time'=>time()));
+            $this->returnJson(array('token'=>$token,'name'=>$res->name,'auth'=>$res->auth,'auth_name'=>'管理员','user_id'=>$res->user_id));
         }else{
             $this->error(-1,'登陆失败');
         }
@@ -189,6 +190,7 @@ class UserController extends Controller
      * @param string $mobile (必填,手机)
      * @param int $seat_id (必填，坐席)
      * @param int $user_id (必填，用户ID)
+     * @param int $conference_id (必填，会议id)
      * @param int $status (必填,状态 0 无效 1有效)
      * @param int $can_sync_screen (必填,是否允许发起同屏幕  0 不允许 1允许)
      * @return data 200成功
@@ -199,7 +201,7 @@ class UserController extends Controller
         $data['create_time'] = date('Y-m-d H:i:s',time());
         $data['update_time'] = date('Y-m-d H:i:s',time());
         $data['password'] = md5($data['password']);
-        $res = DB::table('conferees')->insert($data);
+        $res = DB::table('conferees')->insertGetId($data);
         if ($res){
             $this->returnJson($res);
         }else{
@@ -214,8 +216,9 @@ class UserController extends Controller
      * @param string $title (必填,职务)
      * @param string $email (必填,邮箱)
      * @param string $mobile (必填,手机)
-     * @param int $seat_id (必填，坐席)
+     * @param string $seat_id (必填，坐席)
      * @param int $user_id (必填，用户ID)
+     * @param int $conference_id (必填，会议id)
      * @param int $status (必填,状态 0 无效 1有效)
      * @param int $can_sync_screen (必填,是否允许发起同屏幕  0 不允许 1允许)
      * @param int $conferee_id (必填,参会人ID)
@@ -274,6 +277,7 @@ class UserController extends Controller
      * 获取参会人列表
      * @param string $token (必填)
      * @param int $page (必填,页数)
+     * @param int $conference_id (必填,会议id)
      * @return data 200成功
      */
     public function getUserConfereesList()
@@ -285,14 +289,67 @@ class UserController extends Controller
 //            $pageCountRecord = ($data['page']-1) * 20;
 //        }
         //$res = DB::table('conferees')->offset($pageCountRecord)->limit(20)->orderBy('update_time','desc')->get();
-        $res = DB::table('conferees')->orderBy('update_time','desc')->get();
+        $res = DB::table('conferees as a ')
+            ->select(DB::RAW('a.*,b.seat_code'))
+            ->leftjoin('seats as b','a.seat_id','=','b.seat_id')
+            ->where('a.conference_id',$data['conference_id'])
+            ->where('a.status',1)
+            ->orderBy('a.update_time','desc')
+            ->get();
 
-        $count = DB::table('conferees')->orderBy('update_time','desc')->count();
+        $count = DB::table('conferees')->where('conference_id',$data['conference_id'])->where('status',1)->orderBy('update_time','desc')->count();
 
         if ($res && $count){
+//            foreach ($res as $key){
+//                $key->authlist = DB::table('conference_authorities')
+//                    ->where('conference_id',$data['conference_id'])
+//                    ->where('conferee_id',$key->conferee_id)->get();
+//            }
             $this->returnJson(array('list'=>$res,'count'=>$count));
         }else{
             $this->returnJson(array());
         }
+    }
+    /**
+     * 获取参会人列表文件
+     * @param string $token (必填)
+     * @param int $conference_id (必填,会议id)
+     * @param int $conferee_id (必填,参会人ID)
+     * @return data 200成功
+     */
+    public function getUserConfereesListFile()
+    {
+        $data = $this->getPost($_POST);
+
+        $res = DB::table('conference_attachments')->where('conference_id',$data['conference_id'])->where('status',1)->orderBy('update_time','desc')->get();
+
+        if ($res){
+
+            foreach ($res as $key){
+                $check = DB::table('conference_authorities')->where('conference_id',$data['conference_id'])->where('conferee_id',$data['conferee_id'])->first();
+                if ($check){
+                    if ($check->download_file){
+                        $key->download_file = $check->download_file;
+                    }else{
+                        $key->download_file = 0;
+                    }
+                    if ($check->upload_file){
+                        $key->upload_file = $check->upload_file;
+                    }else{
+                        $key->upload_file = 0;
+                    }
+                }else{
+                    $key->upload_file = 0;
+                    $key->download_file = 0;
+                }
+            }
+
+            $this->returnJson($res);
+        }else{
+            $this->returnJson(array());
+        }
+
+
+
     }
 }

@@ -10,6 +10,9 @@ Route::group(['namespace' => 'V1'],function (){
     Route::post("api/User/login","UserController@login");
 
     Route::post("api/Upload/imgUpload","UploadController@imgUpload");
+    Route::post("api/Upload/excelUpload","UploadController@excelUpload");
+    Route::post("api/Upload/filesUpload","UploadController@filesUpload");
+
 
 });
 Route::group(['namespace' => 'V1','middleware' => ['adminApi']], function () {
@@ -26,6 +29,7 @@ Route::group(['namespace' => 'V1','middleware' => ['adminApi']], function () {
     Route::post("api/User/getUserConfereesInfo","UserController@getUserConfereesInfo");
     Route::post("api/User/deleteUserConferees","UserController@deleteUserConferees");
     Route::post("api/User/getUserConfereesList","UserController@getUserConfereesList");
+    Route::post("api/User/getUserConfereesListFile","UserController@getUserConfereesListFile");
 
 
     Route::post("api/Rooms/createRooms","RoomsController@createRooms");
@@ -46,6 +50,8 @@ Route::group(['namespace' => 'V1','middleware' => ['adminApi']], function () {
     Route::post("api/Rooms/getRoomsSeatsList","RoomsController@getRoomsSeatsList");
     Route::post("api/Rooms/deleteRoomsSeats","RoomsController@deleteRoomsSeats");
 
+    Route::post("api/Rooms/getSeatsList","RoomsController@getSeatsList");
+
     Route::post("api/Meeting/createMeeting","MeetingController@createMeeting");
     Route::post("api/Meeting/updateMeeting","MeetingController@updateMeeting");
     Route::post("api/Meeting/deleteMeeting","MeetingController@deleteMeeting");
@@ -63,6 +69,21 @@ Route::group(['namespace' => 'V1','middleware' => ['adminApi']], function () {
     Route::post("api/Meeting/deleteVote","MeetingController@deleteVote");
     Route::post("api/Meeting/getVoteList","MeetingController@getVoteList");
     Route::post("api/Meeting/getVoteInfo","MeetingController@getVoteInfo");
+    Route::post("api/Meeting/endMeeting","MeetingController@endMeeting");
+
+    Route::post("api/Meeting/createAttachment","MeetingController@createAttachment");
+    Route::post("api/Meeting/updateAttachment","MeetingController@updateAttachment");
+    Route::post("api/Meeting/deleteAttachment","MeetingController@deleteAttachment");
+    Route::post("api/Meeting/getAttachmentList","MeetingController@getAttachmentList");
+    Route::post("api/Meeting/getAttachmentInfo","MeetingController@getAttachmentInfo");
+
+
+    Route::post("api/Meeting/signUserList","MeetingController@signUserList");
+    Route::post("api/Meeting/getMeetingAuth","MeetingController@getMeetingAuth");
+    Route::post("api/Meeting/sendEmail","MeetingController@sendEmail");
+
+    Route::get("api/Upload/getExcelSeats","UploadController@getExcelSeats");
+    Route::get("api/Upload/getExcelUser","UploadController@getExcelUser");
 
 });
 
